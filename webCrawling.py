@@ -4,8 +4,14 @@ from bs4 import BeautifulSoup
 import time
 from datetime import datetime
 from selenium.webdriver.common.by import By
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 import re
 
+def set_chrome_driver():
+    chrome_options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    return driver
 
 UserInput = { 
              'start' : { 
@@ -39,7 +45,7 @@ while not valid:
         # goal = input("Where to go : ")
         goal = "유스퀘어"
     
-    driver = webdriver.Chrome('/usr/local/bin/chromedriver')
+    driver = set_chrome_driver()
     driver.get('https://map.naver.com/v5/?c=14151527.5539962,4467341.8213876,15,0,0,0,dh')  
     driver.implicitly_wait(7)
 
