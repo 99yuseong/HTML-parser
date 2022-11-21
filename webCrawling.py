@@ -108,8 +108,12 @@ time.sleep(0.3)
 
 #길찾기 버튼 클릭
 driver.find_element(By.XPATH, '//*[@id="container"]/shrinkable-layout/div/directions-layout/directions-result/div[1]/div/directions-search/div[2]/button[2]').click()
-time.sleep(3) 
+driver.implicitly_wait(3)
 
 html = driver.page_source
 soup = BeautifulSoup(html, 'html.parser')
 route = soup.find_all('div', {'class' : 'route_summary_info_area'})
+
+f = open("default_html.txt", 'w')
+f.write(html)
+f.close()
