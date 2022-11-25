@@ -174,10 +174,8 @@ while True:
             token_type = "empty-tag"
         elif tag_name in balanced_tags:
             token_type = "balanced-tag"
-            non_empty_tag_stack.append(tag_name)
         else:
             token_type = "custom-tag"
-            non_empty_tag_stack.append(tag_name)
         
         # tag_count dictionary에 태그별 횟 수 저장
         # { html : 1, div : 56, .... }
@@ -187,13 +185,15 @@ while True:
             tag_count[tag_name] = 1  # 존재하지 않으면 count = 1
          
         # Token 생성, Token_table에 추가, 새 html에 작성
-        opening_token = Token("opening-tag", "<", None, len(token_table), None, None)
+        opening_token = Token("opening-tag-start", "<", None, len(token_table), None, None)
         token_table.append(opening_token)
         tokenized_html.write("<opening-tag-start, %s, %d>\n" % ("<", len(token_table)))
         
         token = Token(token_type, tag_name, tag_count[tag_name], len(token_table), None, None)
         token_table.append(token)
-        tokenized_html.write("<opening-tag, %s, %d>\n" % (tag_name, len(token_table)))
+        tokenized_html.write("<%s, %s, %d>\n" % (token_type, tag_name, len(token_table)))
+        
+        non_empty_tag_stack.append(token)
         
         if isAttributeExist:
             attrIter = re.finditer('[a-z_][a-zA-Z0-9_-]+(="[^<>]*?")*', tag[tag.find(" ")+1:])
@@ -225,15 +225,14 @@ while True:
                 except StopIteration:
                     break
         
-        closing_token = Token("closing-tag", ">", None, len(token_table), tag_count[tag_name], attr_count)
+        closing_token = Token("tag-end", ">", None, len(token_table), tag_count[tag_name], attr_count)
         token_table.append(closing_token) 
-        tokenized_html.write("<closing-tag, %s, %d>\n" % (">", len(token_table)))
+        tokenized_html.write("<tag-end, %s, %d>\n" % (">", len(token_table)))
         
         html = html[len(opening_tag):]
         print("opening : ", opening_tag)
         
     elif closing_tag:
-        closing_tag = closing_tag.group(0)
         # 해당 정보를 새로운 txt에 token화 해서 작성하기
         html = html[len(closing_tag):]
         print("closing : ", closing_tag)
