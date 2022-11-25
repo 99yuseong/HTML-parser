@@ -233,6 +233,7 @@ while True:
         print("opening : ", opening_tag)
         
     elif closing_tag:
+        closing_tag = closing_tag.group(0)
         # 해당 정보를 새로운 txt에 token화 해서 작성하기
         html = html[len(closing_tag):]
         print("closing : ", closing_tag)
