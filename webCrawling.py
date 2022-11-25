@@ -114,6 +114,6 @@ html = driver.page_source
 soup = BeautifulSoup(html, 'html.parser')
 route = soup.find_all('div', {'class' : 'route_summary_info_area'})
 
-f = open("default_html.txt", 'w')
+f = open("default_html.html", 'w')
 f.write(html)
 f.close()
