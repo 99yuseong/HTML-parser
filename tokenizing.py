@@ -1,3 +1,4 @@
+from typing import NamedTuple
 import re
 import sys
 # import webCrawling
@@ -72,7 +73,7 @@ import sys
 
 # Token Table Form
 
-# | Tuple (Token_Type, value, count, tag_no, attr_no)
+# | Token (type, name, name_no, total_no, tag_ref, attr_ref)
 # |     count >> distinguish same tags
 # |         attribute's count = None
 # |     tag_no >> match tag and attributes
@@ -80,7 +81,16 @@ import sys
 # |     attr_no >> match attr-name and attr-value
 # |         Token_Type : tag's attr_no = None
 
+class Token(NamedTuple):
+    type: str # 토큰 타입
+    name: str # 토큰 이름
+    name_no: int # 중복된 토큰 이름 count
+    total_no: int # 토큰 번호 
+    tag_ref: int # 종속된 tag 토큰 번호 
+    attr_ref: int # 종속된 attribute 토큰 번호
+    
 html = open("processed_html.txt", 'r').read()
+tokenized_html = open("tokenized_html.txt", 'w')
 
 # 공백, 줄바꿈, 탭 제거
 # html = re.sub("    ", "", webCrawling.html)
@@ -113,7 +123,6 @@ html = re.sub(' onblur=".*?"', "", html)
 html = re.sub(' onkeydown=".*?"', "", html)
 html = re.sub(' onkeyup=".*?"', "", html)
 
-
 # test - txt & html file
 processed_html = open("processed_html.txt", 'w')
 Formatted_html = open("processed_html.html", 'w')
@@ -130,10 +139,8 @@ balanced_tags = ["html","head","style","title","body","address","article","aside
 total_tag_list = [] # 모든 tag를 list로 저장
 non_empty_tag_stack = [] # non-empty tag를 stack으로 저장
 
-empty_tag_count = {} # empty tag 등장한 횟수 { link : 1 ...}
-balanced_tag_count = {} # balanced tag 등장한 횟수 { div : 60 ... }
-custom_tag_count = {} # custom tag 등장한 횟수 { custom_tag : 1 ...}
- 
+tag_count = {} # tag 등장한 횟수 { link : 1 ...}
+
 attr_name_list = [] # 모든 attribute name을 list로 저장
 attr_names_only_list = [] # attribute name only만 list로 저장
 attr_names_value_list = [] # attribute name=value를 list로 저장
@@ -141,57 +148,57 @@ attr_names_value_list = [] # attribute name=value를 list로 저장
 # total stack
 token_table = [] # 튜플 형태로 등장한 토큰 저장 (Token_Type, value, count, tag_no, attr_no)
 
-# 정규표현식에 여러 group이 존재해서 finditer로 이터레이터로 받아야함
-openingsIter = re.finditer('<[a-z][a-z0-9-]*([ a-z_][a-zA-Z0-9_-]+(="[^<>]*")*)*>', html)
 while True:
-    try:
-        # 각 opening tag 별로 < > 제거 후 tag name과 attribute 추출
-        opening_tag = openingsIter.__next__().group()
-        opening_tag = re.sub("<", "", opening_tag) # < 제거
-        opening_tag = re.sub(">", "", opening_tag) # > 제거
+    opening_tag = re.match('<[a-z][a-z0-9-]*([ a-z_][a-zA-Z0-9_-]+(="[^<>]*")*)*>', html)
+    closing_tag = re.match('<\/[a-z][a-z0-9-]*>', html)
+    text_node = re.match('[^<]*[^<>]+[^<>]*', html)
+    
+    if opening_tag:
+        opening_tag = opening_tag.group(0)
+        isAttributeExist = False # Attribute 여부 기본 설정
         
-        isAttributeExist = False
+        tag = re.sub("<", "", opening_tag) # < 제거
+        tag = re.sub(">", "", tag) # > 제거
         
-        if opening_tag.find(" ") != -1: # 공백 존재 여부로 attribute 존재 확인
-            tag = opening_tag[:opening_tag.find(" ")] # tag name 추출
+        # Attribute 여부 확인 & tag name 추출
+        if opening_tag.find(" ") != -1: # 공백 존재 여부 확인
+            tag_name = tag[:tag.find(" ")] # tag name 추출
             isAttributeExist = True
-        
-        # tag name이 나온 횟수를 각각 empty_tag_list, non_empty_tag_list에 저장
-        # ex) { html : 1, div : 5 ...}
-        if tag in empty_tags:
-            token_type = "empty-tag"
-            count = empty_tag_count
-            if tag in empty_tag_count.keys():
-                empty_tag_count[tag] += 1 # 이미 존재하면 count + 1
-            else:
-                empty_tag_count[tag] = 1  # 존재하지 않으면 count = 1
-        
-        elif tag in balanced_tags:
-            token_type = "balanced-tag"
-            count = balanced_tag_count
-            non_empty_tag_stack.append(tag) # 나중에 닫는 tag랑 연결시켜주기 위해 stack에 저장
-            if tag in balanced_tag_count.keys():
-                balanced_tag_count[tag] += 1
-            else:
-                balanced_tag_count[tag] = 1
         else:
+            tag_name = tag
+        
+        # Tag name 별 token type 구분 및 stack 저장 
+        total_tag_list.append(tag_name)
+        
+        if tag_name in empty_tags:
+            token_type = "empty-tag"
+        elif tag_name in balanced_tags:
             token_type = "balanced-tag"
-            count = custom_tag_count
-            non_empty_tag_stack.append(tag) # 나중에 닫는 tag랑 연결시켜주기 위해 stack에 저장
-            if tag in custom_tag_count.keys():
-                custom_tag_count[tag] += 1
-            else:
-                custom_tag_count[tag] = 1
+            non_empty_tag_stack.append(tag_name)
+        else:
+            token_type = "custom-tag"
+            non_empty_tag_stack.append(tag_name)
         
-        total_tag_list.append(tag)
+        # tag_count dictionary에 태그별 횟 수 저장
+        # { html : 1, div : 56, .... }
+        if tag_name in tag_count.keys():
+            tag_count[tag_name] += 1 # 이미 존재하면 count + 1
+        else:
+            tag_count[tag_name] = 1  # 존재하지 않으면 count = 1
+         
+        # Token 생성, Token_table에 추가, 새 html에 작성
+        opening_token = Token("opening-tag", "<", None, len(token_table), None, None)
+        token_table.append(opening_token)
+        tokenized_html.write("<opening-tag-start, %s, %d>\n" % ("<", len(token_table)))
         
-        #(Token_Type, value, count, tag_no, attr_no)
-        token_table.append( (token_type, tag, count[tag], len(total_tag_list),  None) )
-  
+        token = Token(token_type, tag_name, tag_count[tag_name], len(token_table), None, None)
+        token_table.append(token)
+        tokenized_html.write("<opening-tag, %s, %d>\n" % (tag_name, len(token_table)))
+        
         if isAttributeExist:
-            # attribute 이터레이터 생성
-            attrIter = re.finditer('[a-z_][a-zA-Z0-9_-]+(="[^<>]*?")*', opening_tag[opening_tag.find(" ")+1:])
+            attrIter = re.finditer('[a-z_][a-zA-Z0-9_-]+(="[^<>]*?")*', tag[tag.find(" ")+1:])
             attr_count = 0
+
             while True:
                 try:
                     attr = attrIter.__next__().group()
@@ -200,21 +207,44 @@ while True:
                         # attribute가 name=value 꼴이면
                         attr = attr.split("=")
                         attr[1] = re.sub("\"", "", attr[1])
-
-                        token_table.append(("attr-name", attr[0], None, len(total_tag_list), attr_count))
-                        token_table.append(("attr-value", attr[1], None, len(total_tag_list), attr_count))
+                        
+                        attr_name_token = Token("attr-name", attr[0], None, len(token_table), tag_count[tag_name], attr_count)
+                        token_table.append(attr_name_token)
+                        tokenized_html.write("<attr-name, %s, %d>\n" % (attr[0], len(token_table)))
+                        
+                        attr_value_token = Token("attr-value", attr[1], None, len(token_table), tag_count[tag_name], attr_count)
+                        token_table.append(attr_value_token)
+                        tokenized_html.write("<attr-value, %s, %d>\n" % (attr[1], len(token_table)))
+                        
                     else:
                         # attribute가 name only 꼴이면
-                        token_table.append(("attr-name", attr[0], None, len(total_tag_list), attr_count))
+                        attr_name_token = Token("attr-name", attr, None, len(token_table), tag_count[tag_name], attr_count)
+                        token_table.append(attr_name_token)
+                        tokenized_html.write("<attr-name, %s, %d>\n" % (attr, len(token_table)))
                     
                 except StopIteration:
                     break
-                
-    except StopIteration:
+        
+        closing_token = Token("closing-tag", ">", None, len(token_table), tag_count[tag_name], attr_count)
+        token_table.append(closing_token) 
+        tokenized_html.write("<closing-tag, %s, %d>\n" % (">", len(token_table)))
+        
+        html = html[len(opening_tag):]
+        print("opening : ", opening_tag)
+        
+    elif closing_tag:
+        closing_tag = closing_tag.group(0)
+        # 해당 정보를 새로운 txt에 token화 해서 작성하기
+        html = html[len(closing_tag):]
+        print("closing : ", closing_tag)
+    elif text_node:
+        text_node = text_node.group(0)
+        # 해당 정보를 새로운 txt에 token화 해서 작성하기
+        html = html[len(text_node):]
+        print("text_node : ", text_node)
+    else:
+        print("Tokenizing ERROR")
+        tokenized_html.write("\n-----------------\nTokeninzing ERROR\n-----------------")
         break
-
-for token in token_table:
-    print(token)
-
-# 정규표현식이 단일 group이라 list로 받을 수 있음
-closings = re.findall('<\/[a-z][a-z0-9-]*>',html)
+    
+tokenized_html.close()
