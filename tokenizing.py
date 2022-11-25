@@ -1,7 +1,7 @@
 from typing import NamedTuple
 import re
 import sys
-# import webCrawling
+import webCrawling
 
 # Token Type & Regular expression
 
@@ -59,13 +59,14 @@ import sys
 # | 
 # | Arguments
 # |     1. text-node
+# |         regex : [^<]*[^<>]+[^<>]*
 # |         : appears between opening tag and closing tag
 # | 
 
 # | cf)
 # | 
 # | 1. opening Tag
-# |     regex : <[a-z][a-z0-9-]*( [a-z_][a-zA-Z0-9_-]+(="[^<>]*")*)*>
+# |     regex : <[!a-z][a-zA-Z0-9-]*([ a-z_][a-zA-Z0-9_-]+(="[^<>]*")*)*>
 # |     - should divide empty-tag and balanced-tag with saved tag name
 # |
 # | 2. closing Tag
@@ -89,12 +90,11 @@ class Token(NamedTuple):
     tag_ref: int # 종속된 tag 토큰 번호 
     attr_ref: int # 종속된 attribute 토큰 번호
     
-html = open("processed_html.txt", 'r').read()
 tokenized_html = open("tokenized_html.txt", 'w')
+tokenized_table = open("token_table.txt", 'w')
 
 # 공백, 줄바꿈, 탭 제거
-# html = re.sub("    ", "", webCrawling.html)
-html = re.sub("    ", "", html)
+html = re.sub("    ", "", webCrawling.html)
 html = re.sub("  ", "", html)
 html = re.sub("\n", "", html)
 html = re.sub("\t", "", html)
@@ -123,33 +123,23 @@ html = re.sub(' onblur=".*?"', "", html)
 html = re.sub(' onkeydown=".*?"', "", html)
 html = re.sub(' onkeyup=".*?"', "", html)
 
-# test - txt & html file
-processed_html = open("processed_html.txt", 'w')
-Formatted_html = open("processed_html.html", 'w')
-
-processed_html.write(html)
-Formatted_html.write(html)
-
-processed_html.close()
-Formatted_html.close()
-
 empty_tags = ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "track", "wbr"]
 balanced_tags = ["html","head","style","title","body","address","article","aside","footer","header","h1","h2","h3","h4","h5","h6","main","nav","section","blockquote","dd","div","dl","dt","figcaption","figure","li","menu","ol","p","pre","ul","a","abbr","b","bdo","cite","code","data","dfn","em","i","kbd","mark","q","rp","rt","ruby","s","samp","small","span","strong","sub","sup","time","u","var","audio","map","video","iframe","object","canvas","noscript","script","del","ins","caption","colgroup","table","tbody","td","tfoot","th","thead","tr","button","datalist","fieldset","form","label","legend","meter","optgroup","option","output","progress","select","textarea","details","dialog","summary","slot","template"]
 
-total_tag_list = [] # 모든 tag를 list로 저장
-non_empty_tag_stack = [] # non-empty tag를 stack으로 저장
-
 tag_count = {} # tag 등장한 횟수 { link : 1 ...}
-
-attr_name_list = [] # 모든 attribute name을 list로 저장
-attr_names_only_list = [] # attribute name only만 list로 저장
-attr_names_value_list = [] # attribute name=value를 list로 저장
-
-# total stack
-token_table = [] # 튜플 형태로 등장한 토큰 저장 (Token_Type, value, count, tag_no, attr_no)
+token_table = [] # Token 형태로 등장한 토큰 저장 Token(type, name, name_no, total_no, tag_ref, attr_ref)
 
 while True:
-    opening_tag = re.match('<[a-z][a-z0-9-]*([ a-z_][a-zA-Z0-9_-]+(="[^<>]*")*)*>', html)
+    if len(html) == 0:
+        for token in token_table:
+            tokenized_table.write(str(token))
+            tokenized_table.write("\n")
+            
+        tokenized_html.close()
+        tokenized_table.close()
+        exit(0)
+    
+    opening_tag = re.match('<[!a-z][a-zA-Z0-9-]*([ a-z_][a-zA-Z0-9_-]+(="[^<>]*")*)*>', html)
     closing_tag = re.match('<\/[a-z][a-z0-9-]*>', html)
     text_node = re.match('[^<]*[^<>]+[^<>]*', html)
     
@@ -167,9 +157,7 @@ while True:
         else:
             tag_name = tag
         
-        # Tag name 별 token type 구분 및 stack 저장 
-        total_tag_list.append(tag_name)
-        
+        # Tag name 별 token type 구분        
         if tag_name in empty_tags:
             token_type = "empty-tag"
         elif tag_name in balanced_tags:
@@ -192,8 +180,6 @@ while True:
         token = Token(token_type, tag_name, tag_count[tag_name], len(token_table), None, None)
         token_table.append(token)
         tokenized_html.write("<%s, %s, %d>\n" % (token_type, tag_name, len(token_table)))
-        
-        non_empty_tag_stack.append(token)
         
         if isAttributeExist:
             attrIter = re.finditer('[a-z_][a-zA-Z0-9_-]+(="[^<>]*?")*', tag[tag.find(" ")+1:])
@@ -225,26 +211,49 @@ while True:
                 except StopIteration:
                     break
         
-        closing_token = Token("tag-end", ">", None, len(token_table), tag_count[tag_name], attr_count)
+        closing_token = Token("tag-end", ">", None, len(token_table), None, None)
         token_table.append(closing_token) 
         tokenized_html.write("<tag-end, %s, %d>\n" % (">", len(token_table)))
         
         html = html[len(opening_tag):]
-        print("opening : ", opening_tag)
+        # print("opening : ", opening_tag)
         
     elif closing_tag:
         closing_tag = closing_tag.group(0)
-        # 해당 정보를 새로운 txt에 token화 해서 작성하기
+        
+        tag_name = re.sub("</", "", closing_tag) # </ 제거
+        tag_name = re.sub(">", "", tag_name) # > 제거
+        
+        if tag_name in balanced_tags:
+            token_type = "balanced-tag"
+        else:
+            token_type = "custom-tag"
+                
+        closing_start_token = Token("closing-tag-start", "</", None, len(token_table), None, None)
+        token_table.append(closing_start_token) 
+        tokenized_html.write("<closing-tag-start, %s, %d>\n" % ("</", len(token_table)))
+        
+        closing_tag_token = Token(token_type, tag_name, None, len(token_table), None, None)
+        token_table.append(closing_tag_token) 
+        tokenized_html.write("<%s, %s, %d>\n" % (token_type, tag_name, len(token_table)))
+        
+        closing_end_token = Token("tag-end", ">", None, len(token_table), None, None)
+        token_table.append(closing_end_token) 
+        tokenized_html.write("<tag-end, %s, %d>\n" % (">", len(token_table)))
+        
         html = html[len(closing_tag):]
-        print("closing : ", closing_tag)
+        # print("closing : ", closing_tag)
+        
     elif text_node:
         text_node = text_node.group(0)
-        # 해당 정보를 새로운 txt에 token화 해서 작성하기
+        
+        text_token = Token("text-node", text_node, None, len(token_table), None, None)
+        token_table.append(text_token) 
+        tokenized_html.write("<%s, %s, %d>\n" % ("text-node", text_node, len(token_table)))
+        
         html = html[len(text_node):]
-        print("text_node : ", text_node)
+        # print("text_node : ", text_node)
     else:
         print("Tokenizing ERROR")
         tokenized_html.write("\n-----------------\nTokeninzing ERROR\n-----------------")
         break
-    
-tokenized_html.close()
