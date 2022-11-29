@@ -47,12 +47,12 @@ def create_token(t_type, t_value, t_table, t_html=None):
         t_html.write("(%s, %d : %s)\n" % (t_type, len(t_table)-1, t_value))   # tokenized_html.txt에 작성
 
 def tokenize(html_txt): # return token_table
-    tokenized_html = open("tokenized_html.txt", 'w')
-    tokenized_table = open("token_table.txt", 'w')
+    tokenized_html = open("tokenized_html.txt", 'w', encoding='UTF-8')
+    tokenized_table = open("token_table.txt", 'w',  encoding='UTF-8')
     
     token_table = []
     
-    html = open(html_txt, 'r').read()
+    html = open(html_txt, 'r', encoding='UTF-8').read()
     html = preprocess(html)
     
     while True:
@@ -66,7 +66,7 @@ def tokenize(html_txt): # return token_table
             return token_table
         
         opening_tag = re.match('<[^/<>][^<>]*>', html)
-        closing_tag = re.match('<\/[a-z][a-zA-Z0-9-]*>', html)
+        closing_tag = re.match('<\/[a-z][a-zA-Z0-9-:]*>', html)
         text_node = re.match('[^<>"]+|[^<>"]*("[^"]*")+[^<>"]*', html)
         
         if opening_tag:
@@ -95,7 +95,7 @@ def tokenize(html_txt): # return token_table
             
         else:
             opening_tag_idx = re.search('<[^/<>][^<>]*>', html)
-            closing_tag_idx = re.search('<\/[a-z][a-zA-Z0-9-]*>', html)
+            closing_tag_idx = re.search('<\/[a-z][a-zA-Z0-9-:]*>', html)
             text_node_idx = re.search('[^<>"]+|[^<>"]*("[^"]*")+[^<>"]*', html)
             
             opening_tag_start_idx = opening_tag_idx.span()[0] if opening_tag_idx else len(html)
