@@ -66,7 +66,7 @@ def tokenize(html_txt): # return token_table
             return token_table
         
         opening_tag = re.match('<[^/<>][^<>]*>', html)
-        closing_tag = re.match('<\/[a-z][a-zA-Z0-9-]*>', html)
+        closing_tag = re.match('<\/[a-z][a-zA-Z0-9-:]*>', html)
         text_node = re.match('[^<>"]+|[^<>"]*("[^"]*")+[^<>"]*', html)
         
         if opening_tag:
@@ -95,7 +95,7 @@ def tokenize(html_txt): # return token_table
             
         else:
             opening_tag_idx = re.search('<[^/<>][^<>]*>', html)
-            closing_tag_idx = re.search('<\/[a-z][a-zA-Z0-9-]*>', html)
+            closing_tag_idx = re.search('<\/[a-z][a-zA-Z0-9-:]*>', html)
             text_node_idx = re.search('[^<>"]+|[^<>"]*("[^"]*")+[^<>"]*', html)
             
             opening_tag_start_idx = opening_tag_idx.span()[0] if opening_tag_idx else len(html)
