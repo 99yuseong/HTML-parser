@@ -7,9 +7,9 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 import re
-from sys import exit
+from sys import exit, setrecursionlimit
 from selenium.common.exceptions import NoSuchElementException
-from tokenizing import tokenize, tokenize_opening_tag
+from compiler import HTML
 
 
 def set_chrome_driver():
@@ -78,6 +78,9 @@ def dateGenerator_input(data: str): # Conver format of the input time(deadline)
 
 def timeVerification(deadline): # Check if the input time is available
     timeFormatValid = False
+    if  1 < datetime.now().hour < 6:
+        printLog("Error: You cannot use this program while bus is unavailable")
+        exit(1)
     while not timeFormatValid:
         regex = re.compile('[01][0-9]|2[0-3]:[0-5][0-9]') #regular expression of time input
         timeFormatValid = regex.match(deadline) 
@@ -139,7 +142,7 @@ def locationVerification(start, goal): # Check if the input departure and arriva
             return False
         else: # if both of then are available,
             printLog("Checking complete! Your inputs are valid")
-            print()
+            printLog("")
             return True
 
 def crawlingMap():
@@ -163,38 +166,38 @@ def crawlingMap():
     #Click the result button
     Efind_element("xpath", '//*[@id="container"]/shrinkable-layout/div/directions-layout/directions-result/div[1]/div/directions-search/div[2]/button[2]').click()
     time.sleep(3)
-
+    printLog("")
     html = driver.page_source   
-    print()
     return html
 
-def tokenizer():
-    tokenize("source.txt")
-    
 
-def timeSpent(html): # expectation time to arrive (format: 오전/오후 %H:%M 도착)
-    soup = BeautifulSoup(html, 'html.parser')
-    data = soup.find('span', {'class' : 'summary_info ng-star-inserted'}).get_text()  
-    return data
+# Parsing html source code using our own tokenizer & parser
+def createCompiler():
+    return HTML("source.txt")
 
-def walkingTime(html): # Time you have to walk to reach the first bus stop (format: %M)
-    soup = BeautifulSoup(html, 'html.parser')
-    data = soup.find('span', {'class' : 'value ng-star-inserted'}).get_text()
-    data = datetime.strptime(data, "%M")
-    return timedelta(minutes=data.minute)
+def timeSpent(com): # expectation time to arrive (format: 오전/오후 %H:%M 도착)
+    text_node1 = com.search(['span', 'class', '"summary_info ng-star-inserted"'])
+    res1 = com.getTextNode(text_node1).split('$')
+    return(res1[1])
 
-def busName(html): # Bus name (ex 첨단30)
-    soup = BeautifulSoup(html, 'html.parser')
-    data = soup.find('em', {'class' : 'label'}).get_text()
-    return data
+def walkingTime(com): # Time you have to walk to reach the first bus stop (format: %M)
+    # soup = BeautifulSoup(html, 'html.parser')
+    # data = soup.find('span', {'class' : 'value ng-star-inserted'}).get_text()
+    text_node2 = com.search(['span', 'class', '"value ng-star-inserted"'])
+    res2 = com.getTextNode(text_node2).split('$')
+    data2 = datetime.strptime(res2[1], "%M")
+    return timedelta(minutes=data2.minute)
+
+def busName(com): # Bus name (ex 첨단30)
+    # soup = BeautifulSoup(html, 'html.parser')
+    text_node3 = com.search(['em', 'class', '"label"'])
+    res3 = com.getTextNode(text_node3).split('$')
+    return res3[1]
 
 if __name__ == "__main__": 
-    # deadline = input("Enter when you must arrive (ex 16:00): ")
-    # start = input("Enter where you go: ")
-    # goal = input("Enter where you leave: ")
-    deadline = "21:00"
-    start = "광주과학기술원"
-    goal = "LC타워"
+    start = "광주과학기술원" # fixed input: GIST
+    goal = input("Enter your destination: ")
+    deadline = input("Enter when you must arrive (ex 16:00): ")
     
     driver = set_chrome_driver() # set and start the browser driver
     printLog("Program started. DO NOT move your mouse and keyboard!!")
@@ -215,11 +218,20 @@ if __name__ == "__main__":
     n = text_file.write(html)
     text_file.close()
     
-    tokenizer()
+    compiler = createCompiler()
     
-    destTime = dateGenerator(timeSpent(html))  # tentative arrival time given by Naver map 
-    walkTime = walkingTime(html) # Time to reach the bus stop 
-    bus = busName(html) # Bus name and number to take 
+    # automatically write a visible DOM tree in text file
+    setrecursionlimit(10**7)
+    text_file = open("DomTree.txt", 'w', encoding='UTF-8')
+    compiler.print_dom_parser(text_file)
+    text_file.close()
+    
+    
+    destTime = dateGenerator(timeSpent(compiler))  # tentative arrival time given by Naver map 
+    walkTime = walkingTime(compiler) # Time to reach the bus stop 
+    bus = busName(compiler) # Bus name and number to take 
+    printLog("Parsing Complete")
+    
     
     if deadline > destTime:
         # find out how much time is required by subtraction
@@ -232,5 +244,5 @@ if __name__ == "__main__":
     elif deadline == destTime:
         printLog("You must leave now! RUNNN!!!")
     else:
-        printLog("You are already late... ")
+        printLog("You are already late… ")
         printLog("Take a taxi not to lose your friends!!")
