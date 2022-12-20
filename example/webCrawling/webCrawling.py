@@ -9,7 +9,10 @@ from selenium.webdriver.chrome.service import Service
 import re
 from sys import exit, setrecursionlimit
 from selenium.common.exceptions import NoSuchElementException
-from compiler import HTML
+
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+from HTML import HTML
 
 
 def set_chrome_driver():
@@ -173,7 +176,7 @@ def crawlingMap():
 
 # Parsing html source code using our own tokenizer & parser
 def createCompiler():
-    return HTML("source.txt")
+    return HTML("example/source.txt")
 
 def timeSpent(com): # expectation time to arrive (format: 오전/오후 %H:%M 도착)
     text_node1 = com.search(['span', 'class', '"summary_info ng-star-inserted"'])
@@ -214,17 +217,14 @@ if __name__ == "__main__":
         
         
     html = crawlingMap() # crawling whole html source code from browser
-    text_file = open("source.txt", "w", encoding='UTF-8')
+    text_file = open("example/source.txt", "w", encoding='UTF-8')
     n = text_file.write(html)
     text_file.close()
     
     compiler = createCompiler()
     
     # automatically write a visible DOM tree in text file
-    setrecursionlimit(10**7)
-    text_file = open("DomTree.txt", 'w', encoding='UTF-8')
-    compiler.print_dom_parser(text_file)
-    text_file.close()
+    # compiler.print_dom_tree("DomTree.txt")
     
     
     destTime = dateGenerator(timeSpent(compiler))  # tentative arrival time given by Naver map 
