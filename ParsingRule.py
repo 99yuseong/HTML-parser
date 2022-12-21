@@ -62,9 +62,9 @@ class ParsingRule:
             "Syntax Error : Attribute can not exist after '/'", # E4
             "Syntax Error : There is no variable before '='",   # E5
             "Syntax Error : Attribute value can not used alone",    # E6
-            "Syntax Error : Closing tag should end '>'" # E7
+            "Syntax Error : Closing tag should end '>'", # E7
             "Syntax Error : Attribute can not exist in closing tag", # E8
-            "Syntax Error : There should be '=' between attribute name and value"   # E9
+            "Syntax Error : There should be '=' between attribute name and value",   # E9
             "Syntax Error : There should be attribute value after '='", # E10
             "Syntax Error : '==' is not defined symbol"   # E11
         )
@@ -79,4 +79,4 @@ class ParsingRule:
         return self.reduce_rule
     
     def get_error_rule(self):
-        return self.get_error_rule
+        return self.error_rule

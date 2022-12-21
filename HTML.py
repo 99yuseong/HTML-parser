@@ -82,7 +82,7 @@ class HTML:
                 opening_tag = opening_tag.group(0)
                 
                 # create token
-                self.create_token("opening-tag", opening_tag)
+                self.create_token("opening_tag", opening_tag)
                 
                 html = html[len(opening_tag):]
 
@@ -90,7 +90,7 @@ class HTML:
                 closing_tag = closing_tag.group(0)
                 
                 # create token
-                self.create_token("closing-tag", closing_tag)
+                self.create_token("closing_tag", closing_tag)
                 
                 html = html[len(closing_tag):]
                 
@@ -98,7 +98,7 @@ class HTML:
                 text_node = text_node.group(0)
                 
                 # create token
-                self.create_token("text-node", text_node)
+                self.create_token("text_node", text_node)
                 
                 html = html[len(text_node):]
                 
@@ -127,7 +127,7 @@ class HTML:
     def DOM_parsing(self):
         curNode = self.dom_tree
         for t, v, _ in self.tokenized:
-            nxtData = TextNode(v) if t == 'text-node' else Tag(v)
+            nxtData = TextNode(v) if t == 'text_node' else Tag(v)
             if nxtData.type == 'opening_tag':
                 nxtNode = Node(nxtData)
                 curNode.insert(nxtNode)
@@ -141,14 +141,14 @@ class HTML:
                 curNode.insert(Node(nxtData))
         return True
     
-    def search_all(self, data):
-        return self.getTextNode(self.search(data)).split('$')[1:]
+    def get_text_all(self, data):
+        return self.getTextNode(self.search_all(data)).split('$')[1:]
         
-    def search(self, data, node = None): # data = [tag_name, attr_name, attr_value]
+    def search_all(self, data, node = None): # data = [tag_name, attr_name, attr_value]
         ans = []
         if node == None:
             for nxtNode in self.dom_tree.children:
-                ans += self.search(data, nxtNode)
+                ans += self.search_all(data, nxtNode)
         else:
             curData = node.data
             if curData.type == 'text_node':
@@ -156,7 +156,7 @@ class HTML:
             if curData.name == data[0] and curData.check_attr(data[1], '"' + data[2] + '"'):
                 ans.append(node)
             for nxtNode in node.children:
-                ans += self.search(data, nxtNode)
+                ans += self.search_all(data, nxtNode)
         return ans
     
     def getTextNode(self, node):
