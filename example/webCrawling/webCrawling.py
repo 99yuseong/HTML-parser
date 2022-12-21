@@ -11,7 +11,7 @@ from sys import exit, setrecursionlimit
 from selenium.common.exceptions import NoSuchElementException
 
 import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))))
 from HTML import HTML
 
 
@@ -176,26 +176,23 @@ def crawlingMap():
 
 # Parsing html source code using our own tokenizer & parser
 def createCompiler():
-    return HTML("example/source.txt")
+    return HTML("../source.txt")
 
 def timeSpent(com): # expectation time to arrive (format: 오전/오후 %H:%M 도착)
-    text_node1 = com.search(['span', 'class', '"summary_info ng-star-inserted"'])
-    res1 = com.getTextNode(text_node1).split('$')
-    return(res1[1])
+    text_node1 = com.search_all(['span', 'class', 'summary_info ng-star-inserted'])
+    return(text_node1[0])
 
 def walkingTime(com): # Time you have to walk to reach the first bus stop (format: %M)
     # soup = BeautifulSoup(html, 'html.parser')
     # data = soup.find('span', {'class' : 'value ng-star-inserted'}).get_text()
-    text_node2 = com.search(['span', 'class', '"value ng-star-inserted"'])
-    res2 = com.getTextNode(text_node2).split('$')
-    data2 = datetime.strptime(res2[1], "%M")
+    text_node2 = com.search_all(['span', 'class', 'value ng-star-inserted'])
+    data2 = datetime.strptime(text_node2[0], "%M")
     return timedelta(minutes=data2.minute)
 
 def busName(com): # Bus name (ex 첨단30)
     # soup = BeautifulSoup(html, 'html.parser')
-    text_node3 = com.search(['em', 'class', '"label"'])
-    res3 = com.getTextNode(text_node3).split('$')
-    return res3[1]
+    text_node3 = com.search_all(['em', 'class', 'label'])
+    return text_node3[0]
 
 if __name__ == "__main__": 
     start = "광주과학기술원" # fixed input: GIST
@@ -217,7 +214,7 @@ if __name__ == "__main__":
         
         
     html = crawlingMap() # crawling whole html source code from browser
-    text_file = open("example/source.txt", "w", encoding='UTF-8')
+    text_file = open("../source.txt", "w", encoding='UTF-8')
     n = text_file.write(html)
     text_file.close()
     
