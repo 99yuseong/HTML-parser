@@ -179,19 +179,19 @@ def createCompiler():
     return HTML("../source.txt")
 
 def timeSpent(com): # expectation time to arrive (format: 오전/오후 %H:%M 도착)
-    text_node1 = com.search_all(['span', 'class', 'summary_info ng-star-inserted'])
+    text_node1 = com.get_text_all(['span', 'class', 'summary_info ng-star-inserted'])
     return(text_node1[0])
 
 def walkingTime(com): # Time you have to walk to reach the first bus stop (format: %M)
     # soup = BeautifulSoup(html, 'html.parser')
     # data = soup.find('span', {'class' : 'value ng-star-inserted'}).get_text()
-    text_node2 = com.search_all(['span', 'class', 'value ng-star-inserted'])
+    text_node2 = com.get_text_all(['span', 'class', 'value ng-star-inserted'])
     data2 = datetime.strptime(text_node2[0], "%M")
     return timedelta(minutes=data2.minute)
 
 def busName(com): # Bus name (ex 첨단30)
     # soup = BeautifulSoup(html, 'html.parser')
-    text_node3 = com.search_all(['em', 'class', 'label'])
+    text_node3 = com.get_text_all(['em', 'class', 'label'])
     return text_node3[0]
 
 if __name__ == "__main__": 
